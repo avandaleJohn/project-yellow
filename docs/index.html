@@ -74,22 +74,22 @@
   <li>SNS – used for error notifications or address escalation</li>
 </ul>
 
-<img src="/assets/project-yellow-architecture.png" alt="Architecture Diagram">
+<img src="assets/project-yellow-architecture.png" alt="Architecture Diagram">
 
 <h2>Workflow (Journey-Based Design)</h2>
 
 <h3>Journey 1 – Inbound Request from Salesforce</h3>
-<img src="/assets/journey-1.png" alt="Architecture Diagram">
+<img src="assets/journey-1.png" alt="Architecture Diagram">
 <p>A property is registered or flagged in Salesforce. Salesforce calls a secure REST API via API Gateway, sending structured address data, user context, and trigger type. This is persisted into a DynamoDB request table and queued in SQS for downstream throttled processing.</p>
 
 <h3>Journey 2 – Scraping Workflow (Fargate via Step Functions)</h3>
-<img src="/assets/journey-2.png" alt="Architecture Diagram">
+<img src="assets/journey-2.png" alt="Architecture Diagram">
 
 <h3>Journey 3 – Evaluation + Consensus</h3>
-<img src="/assets/journey-3.png" alt="Architecture Diagram">
+<img src="assets/journey-3.png" alt="Architecture Diagram">
 
 <h3>Journey 4 – Manual Review (AppSync UI)</h3>
-<img src="/assets/journey-4.png" alt="Architecture Diagram">
+<img src="assets/journey-4.png" alt="Architecture Diagram">
 
 <h3>Journey 5 – Feedback Loop</h3>
 <p>Confirmed results are stored alongside their vendor payloads to allow for later analytics, future training of machine matching models, or to build a “memory” of previously confirmed addresses (especially helpful for new build units with known shared characteristics).</p>

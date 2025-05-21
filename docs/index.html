@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Project Yellow – Automating Utility Matching at Scale</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 960px;
+      margin: 40px auto;
+      line-height: 1.6;
+      padding: 0 20px;
+    }
+    h1, h2, h3 {
+      color: #222;
+    }
+    code {
+      background: #f2f2f2;
+      padding: 2px 4px;
+      border-radius: 3px;
+      font-family: monospace;
+    }
+    pre {
+      background: #f8f8f8;
+      padding: 10px;
+      overflow-x: auto;
+    }
+    img {
+      max-width: 100%;
+      margin: 20px 0;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: left;
+    }
+    th {
+      background: #f0f0f0;
+    }
+  </style>
+</head>
+<body>
+
+<h1>Project Yellow – Automating Utility Matching at Scale</h1>
+
+<h2>Overview</h2>
+<p>Project Yellow was conceived to automate one of the most repetitive and error-prone processes in the property onboarding journey: determining the availability of utilities at a given address. Historically this was a manual process involving logging into external systems (ESB, GNI, telecom providers), copying data, and manually matching MPRNs back to Salesforce. This approach didn't scale.</p>
+
+<p>I architected a modern, serverless solution built on AWS that ingests property addresses, queries multiple vendor systems in parallel, validates consensus across results, and returns verified MPRNs and utility metadata — with human review only for ambiguous cases. The result is a lightweight, extensible utility matching engine with minimal operational overhead and near real-time automation.</p>
+
+<h2>Business Context</h2>
+<ul>
+  <li><strong>Problem:</strong> Utility data was manually retrieved and matched for every property listing. This created bottlenecks, inconsistent results, and a poor experience for estate agents.</li>
+  <li><strong>Objective:</strong> Build a scalable matching service that could run in the background, integrate cleanly with Salesforce, and support both manual and API-driven flows.</li>
+  <li><strong>Volume:</strong> Expected scale is 200–300 properties per day, with bursts during onboarding cycles.</li>
+</ul>
+
+<h2>Architecture</h2>
+<p>The solution was designed using a serverless-first mindset and includes the following components:</p>
+
+<ul>
+  <li>API Gateway – accepts incoming requests (manual or Salesforce)</li>
+  <li>Amazon SQS – buffers requests for controlled execution</li>
+  <li>AWS Lambda – core orchestration logic for consensus and routing</li>
+  <li>AWS Step Functions – drives multi-vendor parallel scraping and retry logic</li>
+  <li>AWS Fargate (ECS) – runs Selenium containers for headless browser interaction with vendor portals</li>
+  <li>DynamoDB – schema-free NoSQL store for tracking address resolutions and vendor responses</li>
+  <li>AppSync – surfaces ambiguous or unresolved records via a React UI</li>
+  <li>SNS – used for error notifications or address escalation</li>
+</ul>
+
+<img src="/assets/project-yellow-architecture.png" alt="Architecture Diagram">
+
+<h2>Workflow (Journey-Based Design)</h2>
+
+<h3>Journey 1 – Inbound Request from Salesforce</h3>
+<img src="/assets/journey-1.png" alt="Architecture Diagram">
+<p>A property is registered or flagged in Salesforce. Salesforce calls a secure REST API via API Gateway, sending structured address data, user context, and trigger type. This is persisted into a DynamoDB request table and queued in SQS for downstream throttled processing.</p>
+
+<h3>Journey 2 – Scraping Workflow (Fargate via Step Functions)</h3>
+<img src="/assets/journey-2.png" alt="Architecture Diagram">
+
+<h3>Journey 3 – Evaluation + Consensus</h3>
+<img src="/assets/journey-3.png" alt="Architecture Diagram">
+
+<h3>Journey 4 – Manual Review (AppSync UI)</h3>
+<img src="/assets/journey-4.png" alt="Architecture Diagram">
+
+<h3>Journey 5 – Feedback Loop</h3>
+<p>Confirmed results are stored alongside their vendor payloads to allow for later analytics, future training of machine matching models, or to build a “memory” of previously confirmed addresses (especially helpful for new build units with known shared characteristics).</p>
+
+<h2>Data Design</h2>
+<p>Five core DynamoDB tables underpin the architecture:</p>
+<ul>
+  <li><code>Yellow_Request</code>: Inbound requests from Salesforce</li>
+  <li><code>Yellow_Tracking</code>: Job status, start/end timestamps</li>
+  <li><code>Yellow_ProviderResults</code>: Raw scraped or API results</li>
+  <li><code>Yellow_Verification</code>: Manual override candidates</li>
+  <li><code>Yellow_Resolved</code>: Final verified, signed-off utility records</li>
+</ul>
+
+<h2>Tech Details</h2>
+<ul>
+  <li>EC2-based Selenium fallback for CAPTCHA-heavy providers</li>
+  <li>Step Functions with parallel branches + retries with backoff</li>
+  <li>IP rotation support for regional vendor restrictions</li>
+  <li>Parameter Store for encrypted credentials</li>
+  <li>CloudWatch for job observability and alerting</li>
+</ul>
+
+<h2>Operational Performance</h2>
+<p>During the pilot, we tested with 120+ mixed-quality addresses across all provinces:</p>
+<ul>
+  <li>~83% matched successfully with no human input</li>
+  <li>~12% required verification due to ambiguity or fuzzy data</li>
+  <li><2% failed completely (e.g. empty lots or unregistered sites)</li>
+</ul>
+
+<h2>Outcomes</h2>
+<ul>
+  <li>End-to-end job execution from trigger to Salesforce return: ~90 seconds average</li>
+  <li>Reduced internal manual matching time by over 80%</li>
+  <li>Introduced auditable trail for all decisions (automated and human)</li>
+  <li>Modular vendor architecture allows for rapid addition of new sources</li>
+</ul>
+
+<h2>Conclusion</h2>
+<p>Project Yellow delivered a scalable, event-driven system that abstracts away the brittle logic of screen scraping and manual matching. The serverless foundation enables low cost, elastic scaling, and minimal operations. The fallback UI ensures that edge cases are still handled gracefully, and the architecture is future-proofed for machine learning enhancements, personal data vaults, and geospatial analytics.</p>
+
+<p>I designed and delivered the architecture end-to-end, working closely with product and operations teams to ensure the solution aligned with day-to-day business constraints. It’s a great example of how to combine automation, human insight, and cloud-native tooling to solve a real-world problem cleanly and scalably.</p>
+
+<hr>
+<p><em>Authored by John Murphy • GitHub: [your-handle] • LinkedIn: [your-link]</em></p>
+
+</body>
+</html>
